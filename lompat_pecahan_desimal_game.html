@@ -1,0 +1,829 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LOMPAT PECAHAN & DESIMAL - Game Edukasi Matematika Kelas 5</title>
+
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+
+    <!-- MediaPipe Pose (Version-pinned to prevent WASM abort errors) -->
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/pose@0.5.1675469404/pose.js" crossorigin="anonymous"></script>
+
+    <!-- Canvas Confetti -->
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+
+    <!-- html2canvas & jsPDF for Certificate Download -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+
+    <!-- Font & Icons -->
+    <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;600;700&family=Nunito:wght@400;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+    <style>
+        body {
+            font-family: 'Nunito', sans-serif;
+            background: linear-gradient(135deg, #0f172a 0%, #1e1b4b 50%, #311042 100%);
+            color: #f8fafc;
+            user-select: none;
+            overflow-x: hidden;
+        }
+        .font-game {
+            font-family: 'Fredoka', cursive, sans-serif;
+        }
+        /* Custom Glowing & Pulse Effects */
+        .glow-a {
+            box-shadow: 0 0 25px rgba(59, 130, 246, 0.6);
+            border-color: #60a5fa;
+        }
+        .glow-b {
+            box-shadow: 0 0 25px rgba(236, 72, 153, 0.6);
+            border-color: #f472b6;
+        }
+        .active-a {
+            background: linear-gradient(135deg, #2563eb, #1d4ed8) !important;
+            transform: scale(1.03);
+        }
+        .active-b {
+            background: linear-gradient(135deg, #db2777, #be185d) !important;
+            transform: scale(1.03);
+        }
+        /* Mirror video preview */
+        .mirror {
+            transform: scaleX(-1);
+        }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col justify-between items-center p-3 md:p-6 text-slate-100">
+
+    <!-- HEADER / TOP NAV -->
+    <header class="w-full max-w-5xl flex justify-between items-center bg-slate-900/80 backdrop-blur-md px-4 py-3 rounded-2xl border border-slate-700/60 shadow-lg mb-3">
+        <div class="flex items-center space-x-3">
+            <div class="bg-gradient-to-tr from-amber-400 to-amber-600 text-slate-950 p-2.5 rounded-xl font-black text-xl shadow-md">
+                <i class="fa-solid fa-person-running"></i>
+            </div>
+            <div>
+                <h1 class="font-game text-xl md:text-2xl font-bold tracking-wide bg-gradient-to-r from-amber-300 via-amber-400 to-orange-400 bg-clip-text text-transparent">
+                    LOMPAT PECAHAN & DESIMAL
+                </h1>
+                <p class="text-xs text-slate-400 hidden sm:block">Matematika Kelas 5 SD - Motion Controlled</p>
+            </div>
+        </div>
+
+        <!-- Info Badges (Shown during game) -->
+        <div id="game-stats-header" class="hidden flex items-center space-x-3 sm:space-x-6">
+            <div class="text-center">
+                <span class="text-xs text-slate-400 block uppercase font-bold tracking-wider">Soal</span>
+                <span id="question-tracker" class="font-game text-lg md:text-xl text-amber-300 font-bold">1/10</span>
+            </div>
+            <div class="text-center">
+                <span class="text-xs text-slate-400 block uppercase font-bold tracking-wider">Skor</span>
+                <span id="score-tracker" class="font-game text-lg md:text-xl text-emerald-400 font-bold">0</span>
+            </div>
+            <button id="btn-recalibrate" onclick="startCalibration()" class="bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs px-3 py-2 rounded-xl border border-slate-600 transition flex items-center space-x-1">
+                <i class="fa-solid fa-crosshairs"></i>
+                <span class="hidden md:inline">Kalibrasi</span>
+            </button>
+        </div>
+    </header>
+
+    <!-- MAIN CONTAINER -->
+    <main class="w-full max-w-5xl flex-grow flex flex-col justify-center items-center relative">
+
+        <!-- SCREEN 1: IDENTITAS & IZIN KAMERA -->
+        <div id="screen-welcome" class="w-full max-w-xl bg-slate-900/90 border border-slate-700 p-6 md:p-8 rounded-3xl shadow-2xl backdrop-blur-xl text-center my-auto">
+            <div class="inline-block p-4 bg-amber-500/10 rounded-full mb-4 text-amber-400 text-4xl">
+                <i class="fa-solid fa-gamepad"></i>
+            </div>
+            <h2 class="font-game text-3xl font-bold mb-2 text-amber-300">Selamat Datang, Juara!</h2>
+            <p class="text-slate-300 text-sm md:text-base mb-6">
+                Siapkan dirimu untuk melompat ke kiri atau kanan untuk memilih jawaban Matematika yang benar!
+            </p>
+
+            <form id="form-start" onsubmit="handleStartGame(event)" class="space-y-4 text-left">
+                <div>
+                    <label class="block text-xs font-bold uppercase tracking-wider text-slate-400 mb-1">Nama Lengkap Siswa</label>
+                    <input type="text" id="input-student-name" required placeholder="Masukkan nama kamu..." class="w-full bg-slate-800 border border-slate-600 focus:border-amber-400 focus:outline-none px-4 py-3 rounded-xl text-slate-100 placeholder-slate-500 transition">
+                </div>
+                <div>
+                    <label class="block text-xs font-bold uppercase tracking-wider text-slate-400 mb-1">Kelas / Rombel</label>
+                    <input type="text" id="input-student-class" required placeholder="Contoh: 5A / 5 SD" class="w-full bg-slate-800 border border-slate-600 focus:border-amber-400 focus:outline-none px-4 py-3 rounded-xl text-slate-100 placeholder-slate-500 transition">
+                </div>
+
+                <div class="pt-4">
+                    <button type="submit" class="w-full bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 font-game font-bold text-lg text-slate-950 py-3.5 rounded-xl shadow-lg shadow-amber-500/20 transform hover:-translate-y-0.5 transition active:translate-y-0 flex items-center justify-center space-x-2">
+                        <span>Lanjut Ke Kamera & Kalibrasi</span>
+                        <i class="fa-solid fa-arrow-right"></i>
+                    </button>
+                </div>
+            </form>
+        </div>
+
+        <!-- SCREEN 2: KAMERA & KALIBRASI -->
+        <div id="screen-calibration" class="hidden w-full max-w-2xl bg-slate-900/90 border border-slate-700 p-6 rounded-3xl shadow-2xl backdrop-blur-xl text-center my-auto">
+            <h2 class="font-game text-2xl font-bold text-amber-300 mb-2">Uji Kamera & Kalibrasi Tubuh</h2>
+            <p class="text-slate-300 text-sm mb-4">
+                Berdirilah tegak di tengah tangkapan kamera. Sistem akan mencatat posisi bahu & dada sebagai posisi awal (Netral).
+            </p>
+
+            <!-- Video Display Container -->
+            <div class="relative w-full aspect-video bg-black rounded-2xl overflow-hidden border-2 border-slate-700 shadow-inner mb-4">
+                <video id="webcam-preview" class="w-full h-full object-cover mirror" playsinline></video>
+                <canvas id="pose-canvas" class="absolute top-0 left-0 w-full h-full mirror"></canvas>
+                
+                <!-- Calibration Guide Box -->
+                <div id="calib-guide-box" class="absolute inset-0 border-4 border-dashed border-amber-400/50 rounded-2xl pointer-events-none flex items-center justify-center">
+                    <span class="bg-slate-950/80 text-amber-300 px-4 py-2 rounded-xl text-xs md:text-sm font-semibold">
+                        Posisikan Diri Anda di Tengah Layar
+                    </span>
+                </div>
+
+                <!-- Motion Detector Overlay Badge -->
+                <div id="status-badge" class="absolute top-3 left-3 bg-slate-900/80 text-slate-300 px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center space-x-2 border border-slate-700">
+                    <span class="w-2.5 h-2.5 rounded-full bg-yellow-400 animate-pulse"></span>
+                    <span id="status-badge-text">Menghubungkan Kamera...</span>
+                </div>
+            </div>
+
+            <!-- Calibration Actions -->
+            <div class="flex flex-col sm:flex-row justify-center items-center gap-3">
+                <button id="btn-do-calibrate" onclick="calibratePosition()" disabled class="w-full sm:w-auto bg-amber-500 hover:bg-amber-600 disabled:bg-slate-800 disabled:text-slate-600 text-slate-950 font-bold px-6 py-3 rounded-xl transition font-game flex items-center justify-center space-x-2">
+                    <i class="fa-solid fa-bullseye"></i>
+                    <span>Set Posisi Tengah (Kalibrasi)</span>
+                </button>
+                <button id="btn-start-gameplay" onclick="startGameplay()" disabled class="w-full sm:w-auto bg-emerald-500 hover:bg-emerald-600 disabled:bg-slate-800 disabled:text-slate-600 text-slate-950 font-bold px-6 py-3 rounded-xl transition font-game flex items-center justify-center space-x-2">
+                    <span>Mulai Bermain!</span>
+                    <i class="fa-solid fa-play"></i>
+                </button>
+            </div>
+            <p id="calib-instruction" class="text-xs text-amber-400/80 mt-3">Tunggu kamera mendeteksi tubuh Anda...</p>
+        </div>
+
+        <!-- SCREEN 3: GAMEPLAY ARENA -->
+        <div id="screen-game" class="hidden w-full flex flex-col items-center space-y-4 my-auto">
+
+            <!-- Question Card -->
+            <div class="w-full bg-slate-900/90 border border-slate-700/80 p-5 md:p-6 rounded-3xl shadow-xl backdrop-blur-md text-center">
+                <span class="inline-block bg-slate-800 text-amber-400 font-bold text-xs uppercase px-3 py-1 rounded-full mb-2">
+                    Soal Matematika
+                </span>
+                <h2 id="question-text" class="font-game text-2xl md:text-3xl font-bold text-slate-100 tracking-wide">
+                    Pecahan yang senilai dengan 1/2 adalah ...
+                </h2>
+            </div>
+
+            <!-- Central Arena: Live Webcam & Motion Status -->
+            <div class="w-full max-w-2xl relative">
+                <!-- Motion Detector Feedback Banner -->
+                <div id="motion-feedback" class="absolute -top-4 left-1/2 transform -translate-x-1/2 z-20 opacity-0 transition-all duration-300 bg-emerald-500 text-slate-950 font-game font-bold text-sm md:text-base px-6 py-1.5 rounded-full shadow-lg border-2 border-white flex items-center space-x-2">
+                    <i class="fa-solid fa-bolt"></i>
+                    <span id="motion-feedback-text">Gerakan Terdeteksi!</span>
+                </div>
+
+                <!-- Video Frame -->
+                <div class="relative aspect-video bg-black rounded-3xl overflow-hidden border-4 border-slate-800 shadow-2xl">
+                    <video id="game-webcam" class="w-full h-full object-cover mirror" playsinline></video>
+                    <canvas id="game-pose-canvas" class="absolute top-0 left-0 w-full h-full mirror"></canvas>
+
+                    <!-- Motion Visual Threshold Guides -->
+                    <div class="absolute inset-y-0 left-0 w-1/3 border-r-2 border-dashed border-blue-500/30 bg-blue-500/5 pointer-events-none flex items-center justify-start pl-4">
+                        <span class="text-blue-400/40 text-4xl font-black font-game">&lt; A</span>
+                    </div>
+                    <div class="absolute inset-y-0 right-0 w-1/3 border-l-2 border-dashed border-pink-500/30 bg-pink-500/5 pointer-events-none flex items-center justify-end pr-4">
+                        <span class="text-pink-400/40 text-4xl font-black font-game">B &gt;</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Answer Zones (Bottom) -->
+            <div class="w-full grid grid-cols-1 md:grid-cols-2 gap-4">
+                <!-- Zone A (Left) -->
+                <div id="zone-a" class="bg-slate-900/90 border-2 border-blue-500/40 rounded-3xl p-5 md:p-6 transition-all duration-300 flex items-center justify-between relative overflow-hidden group">
+                    <div class="flex items-center space-x-4">
+                        <div class="w-12 h-12 md:w-14 md:h-14 rounded-2xl bg-blue-600 flex items-center justify-center font-game font-extrabold text-2xl text-white shadow-md">
+                            A
+                        </div>
+                        <div>
+                            <span class="text-xs text-blue-400 uppercase font-bold tracking-wider block">Lompat Ke Kiri</span>
+                            <span id="option-a-text" class="font-game text-xl md:text-2xl font-bold text-slate-100">2/4</span>
+                        </div>
+                    </div>
+                    <div class="text-blue-400 text-2xl md:text-3xl animate-pulse">
+                        <i class="fa-solid fa-arrow-left"></i>
+                    </div>
+                </div>
+
+                <!-- Zone B (Right) -->
+                <div id="zone-b" class="bg-slate-900/90 border-2 border-pink-500/40 rounded-3xl p-5 md:p-6 transition-all duration-300 flex items-center justify-between relative overflow-hidden group">
+                    <div class="flex items-center space-x-4">
+                        <div class="w-12 h-12 md:w-14 md:h-14 rounded-2xl bg-pink-600 flex items-center justify-center font-game font-extrabold text-2xl text-white shadow-md">
+                            B
+                        </div>
+                        <div>
+                            <span class="text-xs text-pink-400 uppercase font-bold tracking-wider block">Lompat Ke Kanan</span>
+                            <span id="option-b-text" class="font-game text-xl md:text-2xl font-bold text-slate-100">2/3</span>
+                        </div>
+                    </div>
+                    <div class="text-pink-400 text-2xl md:text-3xl animate-pulse">
+                        <i class="fa-solid fa-arrow-right"></i>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Temporary Explanation Popover / Modal -->
+            <div id="explanation-modal" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-slate-950/80 backdrop-blur-sm p-4">
+                <div class="bg-slate-900 border border-slate-700 max-w-md w-full p-6 rounded-3xl shadow-2xl text-center space-y-4 transform animate-bounce-short">
+                    <div id="modal-icon" class="text-5xl"></div>
+                    <h3 id="modal-title" class="font-game text-2xl font-bold"></h3>
+                    <div id="modal-body" class="bg-slate-800/80 p-4 rounded-2xl text-slate-300 text-sm"></div>
+                    <button onclick="nextQuestion()" class="w-full bg-amber-500 hover:bg-amber-600 text-slate-950 font-game font-bold py-3 rounded-xl transition">
+                        Soal Berikutnya <i class="fa-solid fa-forward ml-1"></i>
+                    </button>
+                </div>
+            </div>
+
+        </div>
+
+        <!-- SCREEN 4: FINISH & DIGITAL CERTIFICATE -->
+        <div id="screen-result" class="hidden w-full max-w-2xl bg-slate-900/95 border border-slate-700 p-6 md:p-8 rounded-3xl shadow-2xl backdrop-blur-xl text-center my-auto my-6">
+            <div class="inline-block p-4 bg-emerald-500/10 rounded-full mb-3 text-emerald-400 text-4xl">
+                <i class="fa-solid fa-trophy"></i>
+            </div>
+            <h2 class="font-game text-3xl font-bold text-amber-300 mb-1">Permainan Selesai!</h2>
+            <p class="text-slate-400 text-sm mb-6">Berikut adalah hasil pencapaian belajar kamu hari ini:</p>
+
+            <!-- Score Summary Cards -->
+            <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6">
+                <div class="bg-slate-800/80 border border-slate-700 p-3 rounded-2xl">
+                    <span class="text-xs text-slate-400 font-bold block">BENAR</span>
+                    <span id="res-correct" class="font-game text-2xl text-emerald-400 font-bold">0</span>
+                </div>
+                <div class="bg-slate-800/80 border border-slate-700 p-3 rounded-2xl">
+                    <span class="text-xs text-slate-400 font-bold block">SALAH</span>
+                    <span id="res-wrong" class="font-game text-2xl text-rose-400 font-bold">0</span>
+                </div>
+                <div class="bg-slate-800/80 border border-slate-700 p-3 rounded-2xl">
+                    <span class="text-xs text-slate-400 font-bold block">NILAI</span>
+                    <span id="res-score" class="font-game text-2xl text-amber-400 font-bold">0</span>
+                </div>
+                <div class="bg-slate-800/80 border border-slate-700 p-3 rounded-2xl">
+                    <span class="text-xs text-slate-400 font-bold block">AKURASI</span>
+                    <span id="res-accuracy" class="font-game text-2xl text-cyan-400 font-bold">0%</span>
+                </div>
+            </div>
+
+            <!-- Printable Certificate Preview Area -->
+            <div id="certificate-node" class="bg-gradient-to-br from-slate-950 via-slate-900 to-indigo-950 border-4 border-amber-400/80 p-6 rounded-2xl text-slate-100 relative overflow-hidden shadow-2xl mb-6">
+                <!-- Certificate Decorative Watermark -->
+                <div class="absolute -right-10 -bottom-10 opacity-5 text-amber-300 text-9xl font-black pointer-events-none">
+                    <i class="fa-solid fa-award"></i>
+                </div>
+
+                <div class="border-2 border-amber-400/30 p-5 rounded-xl text-center relative z-10">
+                    <p class="text-xs font-bold uppercase tracking-widest text-amber-400 mb-1">Sertifikat Penghargaan</p>
+                    <h3 class="font-game text-2xl md:text-3xl font-bold text-white mb-2">LOMPAT PECAHAN & DESIMAL</h3>
+                    <p class="text-xs text-slate-300 italic mb-4">Diberikan kepada siswa berprestasi:</p>
+                    
+                    <h4 id="cert-name" class="font-game text-2xl md:text-3xl text-amber-300 font-extrabold underline decoration-amber-500/50 mb-1">Nama Siswa</h4>
+                    <p id="cert-class" class="text-xs text-slate-300 font-bold mb-4">Kelas: 5A</p>
+
+                    <p class="text-xs text-slate-300 max-w-md mx-auto mb-4">
+                        Telah berhasil menyelesaikan tantangan game interaktif materi <span class="text-amber-300 font-semibold">Pecahan Biasa & Desimal Kelas 5 SD</span> dengan hasil sebagai berikut:
+                    </p>
+
+                    <div class="flex justify-center items-center space-x-6 my-3">
+                        <div class="bg-slate-900/90 border border-amber-400/40 px-4 py-2 rounded-xl">
+                            <span class="text-[10px] text-slate-400 block uppercase font-bold">Nilai Akhir</span>
+                            <span id="cert-score" class="font-game text-xl text-emerald-400 font-bold">100</span>
+                        </div>
+                        <div class="bg-slate-900/90 border border-amber-400/40 px-4 py-2 rounded-xl">
+                            <span class="text-[10px] text-slate-400 block uppercase font-bold">Tanggal</span>
+                            <span id="cert-date" class="font-game text-sm text-amber-300 font-bold">28/10/2026</span>
+                        </div>
+                    </div>
+
+                    <div class="mt-4 pt-3 border-t border-slate-800 flex justify-between items-center text-[10px] text-slate-400">
+                        <span>Game Edukasi Motion Control SD</span>
+                        <span>Verifikasi MediaPipe Pose</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Finish Actions -->
+            <div class="flex flex-col sm:flex-row justify-center items-center gap-3">
+                <button onclick="downloadCertificate()" class="w-full sm:w-auto bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600 text-slate-950 font-game font-bold px-6 py-3 rounded-xl transition shadow-lg flex items-center justify-center space-x-2">
+                    <i class="fa-solid fa-download"></i>
+                    <span>Unduh Sertifikat PDF</span>
+                </button>
+                <button onclick="restartGame()" class="w-full sm:w-auto bg-slate-800 hover:bg-slate-700 border border-slate-600 text-slate-200 font-game font-bold px-6 py-3 rounded-xl transition flex items-center justify-center space-x-2">
+                    <i class="fa-solid fa-rotate-right"></i>
+                    <span>Main Lagi</span>
+                </button>
+            </div>
+        </div>
+
+    </main>
+
+    <!-- FOOTER -->
+    <footer class="w-full max-w-5xl text-center py-3 text-xs text-slate-500">
+        LOMPAT PECAHAN & DESIMAL &copy; 2026 - MediaPipe Pose Motion Control Edition
+    </footer>
+
+    <!-- JAVASCRIPT GAME LOGIC -->
+    <script>
+        /* ==========================================================================
+           1. DATA SOAL MATEMATIKA (EASY TO EDIT BY TEACHERS)
+           ========================================================================== */
+        const QUESTION_BANK = [
+            {
+                question: "Pecahan yang senilai dengan 1/2 adalah ...",
+                optionA: "2/4",
+                optionB: "2/3",
+                correct: "A",
+                explanation: "1/2 jika pembilang dan penyebut dikali 2 menghasilkan 2/4."
+            },
+            {
+                question: "Bentuk desimal dari 3/4 adalah ...",
+                optionA: "0,34",
+                optionB: "0,75",
+                correct: "B",
+                explanation: "3 dibagi 4 adalah 0,75 (atau 3/4 = 75/100 = 0,75)."
+            },
+            {
+                question: "Manakah yang nilainya lebih besar?",
+                optionA: "0,6",
+                optionB: "0,8",
+                correct: "B",
+                explanation: "0,8 lebih besar daripada 0,6 karena 8 per sepuluh > 6 per sepuluh."
+            },
+            {
+                question: "Bentuk pecahan sederhana dari 0,5 adalah ...",
+                optionA: "1/2",
+                optionB: "1/5",
+                correct: "A",
+                explanation: "0,5 = 5/10, jika disederhanakan (dibagi 5) menjadi 1/2."
+            },
+            {
+                question: "Manakah yang nilainya sama dengan 0,25?",
+                optionA: "1/4",
+                optionB: "1/2",
+                correct: "A",
+                explanation: "1 dibagi 4 = 0,25 (seperempat)."
+            },
+            {
+                question: "Hasil penjumlahan dari 1/2 + 1/4 adalah ...",
+                optionA: "3/4",
+                optionB: "2/6",
+                correct: "A",
+                explanation: "1/2 diubah menjadi 2/4. Maka 2/4 + 1/4 = 3/4."
+            },
+            {
+                question: "Manakah yang nilainya lebih kecil?",
+                optionA: "0,35",
+                optionB: "0,53",
+                correct: "A",
+                explanation: "0,35 lebih kecil dari 0,53."
+            },
+            {
+                question: "Bentuk desimal dari 1/5 adalah ...",
+                optionA: "0,5",
+                optionB: "0,2",
+                correct: "B",
+                explanation: "1/5 = 2/10 = 0,2."
+            },
+            {
+                question: "Ibu memiliki 1 meter pita. Digunakan 0,75 meter. Sisa pita adalah ...",
+                optionA: "0,25 meter",
+                optionB: "0,35 meter",
+                correct: "A",
+                explanation: "1 - 0,75 = 0,25 meter."
+            },
+            {
+                question: "Urutan dari pecahan desimal terkecil ke terbesar adalah ...",
+                optionA: "0,2 ; 0,5 ; 0,8",
+                optionB: "0,8 ; 0,5 ; 0,2",
+                correct: "A",
+                explanation: "0,2 adalah yang terkecil dan 0,8 adalah yang terbesar."
+            }
+        ];
+
+        /* ==========================================================================
+           2. STATE & GLOBAL VARIABLES
+           ========================================================================== */
+        let studentData = { name: "", class: "" };
+        let currentQuestionIdx = 0;
+        let score = 0;
+        let correctCount = 0;
+        let wrongCount = 0;
+
+        // Motion control & Calibration states
+        let pose = null;
+        let videoStream = null;
+        let animationFrameId = null;
+        let isCalibrated = false;
+        let baselineX = 0.5; // Baseline center normalized position (X)
+        let isAnswerLocked = false; // Prevents double answers per question
+        let activeVideoElement = null;
+        let activeCanvasElement = null;
+
+        // Sound synthesizer (Web Audio API)
+        const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+
+        /* ==========================================================================
+           3. AUDIO SYNTHESIZER FUNCTIONS
+           ========================================================================== */
+        function playSound(type) {
+            if (audioCtx.state === 'suspended') {
+                audioCtx.resume();
+            }
+            const osc = audioCtx.createOscillator();
+            const gain = audioCtx.createGain();
+            osc.connect(gain);
+            gain.connect(audioCtx.destination);
+
+            const now = audioCtx.currentTime;
+
+            if (type === 'correct') {
+                // Success Arpeggio
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(523.25, now); // C5
+                osc.frequency.setValueAtTime(659.25, now + 0.1); // E5
+                osc.frequency.setValueAtTime(783.99, now + 0.2); // G5
+                gain.gain.setValueAtTime(0.3, now);
+                gain.gain.exponentialRampToValueAtTime(0.01, now + 0.5);
+                osc.start(now);
+                osc.stop(now + 0.5);
+            } else if (type === 'wrong') {
+                // Wrong Sound
+                osc.type = 'sawtooth';
+                osc.frequency.setValueAtTime(220, now); // A3
+                osc.frequency.setValueAtTime(164.81, now + 0.15); // E3
+                gain.gain.setValueAtTime(0.3, now);
+                gain.gain.exponentialRampToValueAtTime(0.01, now + 0.4);
+                osc.start(now);
+                osc.stop(now + 0.4);
+            } else if (type === 'motion') {
+                // Motion Feedback Tick
+                osc.type = 'triangle';
+                osc.frequency.setValueAtTime(440, now);
+                gain.gain.setValueAtTime(0.1, now);
+                gain.gain.exponentialRampToValueAtTime(0.01, now + 0.08);
+                osc.start(now);
+                osc.stop(now + 0.08);
+            }
+        }
+
+        /* ==========================================================================
+           4. SCREEN SWITCHING LOGIC
+           ========================================================================== */
+        function showScreen(screenId) {
+            ['screen-welcome', 'screen-calibration', 'screen-game', 'screen-result'].forEach(id => {
+                const el = document.getElementById(id);
+                if (id === screenId) {
+                    el.classList.remove('hidden');
+                } else {
+                    el.classList.add('hidden');
+                }
+            });
+
+            // Toggle Stats Header
+            const headerStats = document.getElementById('game-stats-header');
+            if (screenId === 'screen-game') {
+                headerStats.classList.remove('hidden');
+            } else {
+                headerStats.classList.add('hidden');
+            }
+        }
+
+        /* ==========================================================================
+           5. START & CALIBRATION FLOW
+           ========================================================================== */
+        function handleStartGame(e) {
+            e.preventDefault();
+            studentData.name = document.getElementById('input-student-name').value.trim();
+            studentData.class = document.getElementById('input-student-class').value.trim();
+
+            showScreen('screen-calibration');
+            initCamera('webcam-preview', 'pose-canvas');
+        }
+
+        async function initCamera(videoElemId, canvasElemId) {
+            activeVideoElement = document.getElementById(videoElemId);
+            activeCanvasElement = document.getElementById(canvasElemId);
+
+            // Stop any existing animation loop or camera stream
+            if (animationFrameId) {
+                cancelAnimationFrame(animationFrameId);
+                animationFrameId = null;
+            }
+
+            if (pose === null) {
+                // Pin explicit version URL matching script tag to avoid WASM abort/mismatch
+                const MEDIAPIPE_POSE_VERSION = '0.5.1675469404';
+                
+                pose = new Pose({
+                    locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/pose@${MEDIAPIPE_POSE_VERSION}/${file}`
+                });
+
+                pose.setOptions({
+                    modelComplexity: 1,
+                    smoothLandmarks: true,
+                    minDetectionConfidence: 0.5,
+                    minTrackingConfidence: 0.5
+                });
+
+                pose.onResults(onPoseResults);
+            }
+
+            try {
+                // Request webcam stream using native getUserMedia (no Camera Utils dependency)
+                if (!videoStream) {
+                    videoStream = await navigator.mediaDevices.getUserMedia({
+                        video: { width: { ideal: 640 }, height: { ideal: 480 }, facingMode: 'user' },
+                        audio: false
+                    });
+                }
+
+                activeVideoElement.srcObject = videoStream;
+                await activeVideoElement.play();
+
+                updateBadge("Mendeteksi Tubuh...", "bg-yellow-400");
+
+                // Continuous processing loop using requestAnimationFrame
+                async function processFrame() {
+                    if (activeVideoElement && !activeVideoElement.paused && !activeVideoElement.ended && pose) {
+                        try {
+                            await pose.send({ image: activeVideoElement });
+                        } catch (err) {
+                            console.error("MediaPipe frame send error:", err);
+                        }
+                    }
+                    animationFrameId = requestAnimationFrame(processFrame);
+                }
+
+                processFrame();
+            } catch (err) {
+                console.error("Webcam access error:", err);
+                alert("Gagal mengakses webcam. Pastikan memberikan izin kamera pada browser!");
+                updateBadge("Akses Kamera Ditolak", "bg-red-500");
+            }
+        }
+
+        function updateBadge(text, colorClass) {
+            const badgeText = document.getElementById('status-badge-text');
+            const badgeDot = document.querySelector('#status-badge span');
+            if (badgeText && badgeDot) {
+                badgeText.innerText = text;
+                badgeDot.className = `w-2.5 h-2.5 rounded-full animate-pulse ${colorClass}`;
+            }
+        }
+
+        /* ==========================================================================
+           6. MEDIAPIPE POSE TRACKING & MOTION DETECTION
+           ========================================================================== */
+        let rawBodyCenterX = 0.5;
+        let isPoseDetected = false;
+
+        function onPoseResults(results) {
+            const canvasCtx = activeCanvasElement.getContext('2d');
+            canvasCtx.save();
+            canvasCtx.clearRect(0, 0, activeCanvasElement.width, activeCanvasElement.height);
+
+            if (results.poseLandmarks) {
+                isPoseDetected = true;
+                const landmarks = results.poseLandmarks;
+
+                // Left Shoulder (11) & Right Shoulder (12)
+                const leftShoulder = landmarks[11];
+                const rightShoulder = landmarks[12];
+
+                // Calculate Body Center X
+                rawBodyCenterX = (leftShoulder.x + rightShoulder.x) / 2;
+
+                // Draw Simple Skeleton Visuals
+                canvasCtx.fillStyle = '#f59e0b';
+                canvasCtx.beginPath();
+                canvasCtx.arc(rawBodyCenterX * activeCanvasElement.width, leftShoulder.y * activeCanvasElement.height, 12, 0, 2 * Math.PI);
+                canvasCtx.fill();
+
+                if (!isCalibrated) {
+                    document.getElementById('btn-do-calibrate').disabled = false;
+                    document.getElementById('calib-instruction').innerText = "Tubuh terdeteksi! Klik 'Set Posisi Tengah' saat berdiri di tengah.";
+                    updateBadge("Siap Kalibrasi", "bg-emerald-400");
+                } else if (document.getElementById('screen-game').classList.contains('hidden') === false) {
+                    // Check Motion in Gameplay
+                    checkMotionAnswer(rawBodyCenterX);
+                }
+            } else {
+                isPoseDetected = false;
+                if (!isCalibrated) {
+                    updateBadge("Mencari Tubuh...", "bg-yellow-400");
+                }
+            }
+            canvasCtx.restore();
+        }
+
+        function calibratePosition() {
+            if (!isPoseDetected) {
+                alert("Tubuh belum terdeteksi oleh kamera. Pastikan posisi Anda terlihat jelas!");
+                return;
+            }
+            baselineX = rawBodyCenterX;
+            isCalibrated = true;
+
+            document.getElementById('btn-start-gameplay').disabled = false;
+            document.getElementById('calib-instruction').innerText = "Kalibrasi Berhasil! Klik 'Mulai Bermain!' untuk memulai.";
+            document.getElementById('calib-guide-box').classList.add('border-emerald-400');
+            playSound('correct');
+        }
+
+        function startCalibration() {
+            isCalibrated = false;
+            showScreen('screen-calibration');
+            initCamera('webcam-preview', 'pose-canvas');
+        }
+
+        /* ==========================================================================
+           7. GAMEPLAY CONTROLLER
+           ========================================================================== */
+        function startGameplay() {
+            currentQuestionIdx = 0;
+            score = 0;
+            correctCount = 0;
+            wrongCount = 0;
+
+            showScreen('screen-game');
+            initCamera('game-webcam', 'game-pose-canvas');
+            loadQuestion();
+        }
+
+        function loadQuestion() {
+            isAnswerLocked = false;
+            const q = QUESTION_BANK[currentQuestionIdx];
+
+            document.getElementById('question-tracker').innerText = `${currentQuestionIdx + 1}/${QUESTION_BANK.length}`;
+            document.getElementById('score-tracker').innerText = score;
+            document.getElementById('question-text').innerText = q.question;
+            document.getElementById('option-a-text').innerText = q.optionA;
+            document.getElementById('option-b-text').innerText = q.optionB;
+
+            // Reset Answer Card UI Highlights
+            const zoneA = document.getElementById('zone-a');
+            const zoneB = document.getElementById('zone-b');
+            zoneA.className = "bg-slate-900/90 border-2 border-blue-500/40 rounded-3xl p-5 md:p-6 transition-all duration-300 flex items-center justify-between relative overflow-hidden group";
+            zoneB.className = "bg-slate-900/90 border-2 border-pink-500/40 rounded-3xl p-5 md:p-6 transition-all duration-300 flex items-center justify-between relative overflow-hidden group";
+        }
+
+        function checkMotionAnswer(currentX) {
+            if (isAnswerLocked) return;
+
+            // Movement Threshold (Since video is mirrored, moving user's LEFT shifts center X to GREATER value in raw coordinates)
+            // Mirror logic adjustment:
+            // Jumping/moving to user LEFT -> Raw X increases (Choice A)
+            // Jumping/moving to user RIGHT -> Raw X decreases (Choice B)
+            const THRESHOLD = 0.08; // Sensitivity threshold relative to baseline
+
+            const delta = currentX - baselineX;
+
+            const zoneA = document.getElementById('zone-a');
+            const zoneB = document.getElementById('zone-b');
+
+            if (delta > THRESHOLD) {
+                // User moved LEFT (Selected A)
+                zoneA.classList.add('glow-a', 'active-a');
+                triggerAnswer('A');
+            } else if (delta < -THRESHOLD) {
+                // User moved RIGHT (Selected B)
+                zoneB.classList.add('glow-b', 'active-b');
+                triggerAnswer('B');
+            } else {
+                zoneA.classList.remove('glow-a', 'active-a');
+                zoneB.classList.remove('glow-b', 'active-b');
+            }
+        }
+
+        function triggerAnswer(selectedOption) {
+            isAnswerLocked = true; // Lock motion until modal handles next step
+            playSound('motion');
+
+            // Show temporary motion notification
+            showMotionFeedback(`Gerakan terdeteksi: Pilihan ${selectedOption}`);
+
+            const q = QUESTION_BANK[currentQuestionIdx];
+            const isCorrect = (selectedOption === q.correct);
+
+            setTimeout(() => {
+                showExplanationModal(isCorrect, selectedOption, q);
+            }, 600);
+        }
+
+        function showMotionFeedback(text) {
+            const feedback = document.getElementById('motion-feedback');
+            document.getElementById('motion-feedback-text').innerText = text;
+            feedback.classList.remove('opacity-0');
+            setTimeout(() => {
+                feedback.classList.add('opacity-0');
+            }, 1500);
+        }
+
+        function showExplanationModal(isCorrect, selectedOption, q) {
+            const modal = document.getElementById('explanation-modal');
+            const modalIcon = document.getElementById('modal-icon');
+            const modalTitle = document.getElementById('modal-title');
+            const modalBody = document.getElementById('modal-body');
+
+            if (isCorrect) {
+                score += 10;
+                correctCount++;
+                playSound('correct');
+                confetti({ particleCount: 80, spread: 70, origin: { y: 0.6 } });
+
+                modalIcon.innerHTML = `<i class="fa-solid fa-circle-check text-emerald-400"></i>`;
+                modalTitle.className = "font-game text-2xl font-bold text-emerald-400";
+                modalTitle.innerText = "Hore! Jawaban Benar (+10)";
+            } else {
+                wrongCount++;
+                playSound('wrong');
+
+                modalIcon.innerHTML = `<i class="fa-solid fa-circle-xmark text-rose-500"></i>`;
+                modalTitle.className = "font-game text-2xl font-bold text-rose-400";
+                modalTitle.innerText = "Ups! Belum Tepat (0)";
+            }
+
+            modalBody.innerHTML = `
+                <p class="mb-2"><strong>Pilihan Kamu:</strong> ${selectedOption}</p>
+                <p class="mb-2"><strong>Jawaban Benar:</strong> ${q.correct} (${q['option' + q.correct]})</p>
+                <div class="mt-3 p-3 bg-slate-900/80 rounded-xl text-xs text-amber-200 text-left border border-slate-700">
+                    <i class="fa-solid fa-lightbulb mr-1 text-amber-400"></i> <strong>Penjelasan:</strong><br>${q.explanation}
+                </div>
+            `;
+
+            modal.classList.remove('hidden');
+        }
+
+        function nextQuestion() {
+            document.getElementById('explanation-modal').classList.add('hidden');
+            currentQuestionIdx++;
+
+            if (currentQuestionIdx < QUESTION_BANK.length) {
+                loadQuestion();
+            } else {
+                finishGame();
+            }
+        }
+
+        /* ==========================================================================
+           8. FINISH & CERTIFICATE GENERATION
+           ========================================================================== */
+        function finishGame() {
+            showScreen('screen-result');
+
+            // Calculate Metrics
+            const totalQuestions = QUESTION_BANK.length;
+            const accuracy = Math.round((correctCount / totalQuestions) * 100);
+
+            document.getElementById('res-correct').innerText = correctCount;
+            document.getElementById('res-wrong').innerText = wrongCount;
+            document.getElementById('res-score').innerText = score;
+            document.getElementById('res-accuracy').innerText = `${accuracy}%`;
+
+            // Populate Digital Certificate
+            document.getElementById('cert-name').innerText = studentData.name || "Siswa Indonesia";
+            document.getElementById('cert-class').innerText = `Kelas: ${studentData.class || "5 SD"}`;
+            document.getElementById('cert-score').innerText = score;
+
+            const today = new Date();
+            const dateStr = today.toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' });
+            document.getElementById('cert-date').innerText = dateStr;
+
+            confetti({ particleCount: 150, spread: 100, origin: { y: 0.4 } });
+        }
+
+        function downloadCertificate() {
+            const certElement = document.getElementById('certificate-node');
+
+            // Use html2canvas and jsPDF
+            html2canvas(certElement, { scale: 2 }).then(canvas => {
+                const imgData = canvas.toDataURL('image/png');
+                const { jsPDF } = window.jspdf;
+                const pdf = new jsPDF('landscape', 'pt', 'a4');
+
+                const imgProps = pdf.getImageProperties(imgData);
+                const pdfWidth = pdf.internal.pageSize.getWidth();
+                const pdfHeight = (imgProps.height * pdfWidth) / imgProps.width;
+
+                pdf.addImage(imgData, 'PNG', 0, 40, pdfWidth, pdfHeight);
+                pdf.save(`Sertifikat_${studentData.name.replace(/\s+/g, '_')}_LompatPecahan.pdf`);
+            }).catch(err => {
+                alert("Gagal mengunduh sertifikat: " + err.message);
+            });
+        }
+
+        function restartGame() {
+            showScreen('screen-welcome');
+        }
+    </script>
+</body>
+</html>
